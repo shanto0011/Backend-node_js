@@ -1,47 +1,33 @@
-const express = require("express");
-const dotenv = require('dotenv');
-dotenv.config();
-var { graphqlHTTP } = require("express-graphql");
-
-
-const schema = require("./schema/schema");
-const mongoose = require("mongoose");
-
+const express = require('express');
 const app = express();
-const port = process.env.PORT || 4000;
-const cors = require("cors");
+const tasks = require('./routes/tasks');
+const connectDB = require('./db/connect');
+require('dotenv').config();
+const notFound = require('./middleware/not-found');
+const errorHandlerMiddleware = require('./middleware/error-handler');
 
-app.use(cors());
-app.use(
-    "/graphql",
-    graphqlHTTP({
-        graphiql: true,
-        schema,
-    })
-);
+// middleware
 
+app.use(express.static('./public'));
+app.use(express.json());
 
+// routes
 
-mongoose.connect(process.env.MONGODB_SERVER, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        dbName: 'flutter-with-graphql'
-    })
-    .then(() => {
-        console.log('Database Connection is ready...');
-        app.listen(port, () => {
-            console.log(process.env.MONGODB_SERVER);
-            console.log(`server is running http://localhost:${port}`);
-        })
-    })
-    .catch((err) => {
-        console.log(err);
-    })
+app.use('/api/v1/tasks', tasks);
 
+app.use(notFound);
+app.use(errorHandlerMiddleware);
+const port = process.env.PORT || 5000;
 
+const start = async() => {
+    try {
+        await connectDB(process.env.MONGO_URI);
+        app.listen(port, () =>
+            console.log(`Server is listening on port ${port}...`)
+        );
+    } catch (error) {
+        console.log(error);
+    }
+};
 
-/***
- * .env containe those information
-PORT=4000
-MONGODB_SERVER="mongodb://127.0.0.1:27017/shanto"
- */
+start();
